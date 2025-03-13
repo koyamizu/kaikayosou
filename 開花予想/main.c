@@ -7,15 +7,17 @@
 #include "sqlite3.h"
 #include <math.h>
 
+//observation...観測所
 #define OBS_NUM sizeof(observations)/sizeof(observations[0])
 #define YEAR 2025
+//小数第2位以降を四捨五入する。誤差を少なくするため。
 #define ROUND(x) round(x*100)/100
 
 enum MENU {
 	VIEW, SEARCH, ERASE, EXIT
 };
 
-// メモリにレスポンスを格納する構造体
+// メモリにレスポンスを格納する構造体　GPT記述
 struct Memory {
 	char* response;
 	size_t size;
@@ -27,6 +29,7 @@ typedef struct {
 	int menu;
 }OBSERVATION;
 
+//初期化はGPTが記述
 OBSERVATION observations[] = {
 	{"稚内", 47401, 0}, {"北見枝幸", 47402, 1}, {"羽幌", 47404, 2}, {"雄武", 47405, 3},
 	{"留萌", 47406, 4}, {"旭川", 47407, 5}, {"網走", 47409, 6}, {"小樽", 47411, 7},
@@ -70,6 +73,7 @@ OBSERVATION observations[] = {
 	{"南鳥島", 47991, 156}
 };
 
+//平均気温合計と最高気温合計の平均を求めるときにtm_ydayがあると便利だったので用意
 struct tm makeTimeStruct(int y, int m, int d) {
 	struct tm t;
 
@@ -87,7 +91,7 @@ struct tm makeTimeStruct(int y, int m, int d) {
 	}
 	return t;
 }
-// レスポンスデータをメモリに保存
+// レスポンスデータをメモリに保存　GPT記述
 static size_t write_callback(void* data, size_t size, size_t nmemb, void* userp) {
 	size_t total_size = size * nmemb;
 	struct Memory* mem = (struct Memory*)userp;
@@ -112,11 +116,11 @@ static size_t write_callback(void* data, size_t size, size_t nmemb, void* userp)
 }
 
 
-// APIからデータを取得
+// APIからデータを取得　GPT記述
 char* fetch_data(int no, int year, int month, int thisYear) {
 	CURL* curl;
 	CURLcode res;
-	struct Memory chunk = { NULL, 0 };  // malloc(1) をやめて NULL に初期化
+	struct Memory chunk = { NULL, 0 }; 
 	char url[256];
 
 	snprintf(url, sizeof(url),
@@ -153,7 +157,7 @@ char* fetch_data(int no, int year, int month, int thisYear) {
 	return chunk.response;
 }
 
-// コールバック関数
+// コールバック関数 GPT記述
 int callback(void* NotUsed, int argc, char** argv, char** azColName) {
 	for (int i = 0; i < argc; i++) {
 		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
@@ -161,7 +165,7 @@ int callback(void* NotUsed, int argc, char** argv, char** azColName) {
 	printf("\n");
 	return 0;
 }
-
+//GPT記述　もともと関数ではなく、関数化は自分でやった
 int sqlCreateExecute(const char* sql, sqlite3* db) {
 	char* errMsg = 0;
 	int rc;
@@ -181,7 +185,7 @@ int  sqlSelectExecute(const char* sql, sqlite3* db, char* observationName) {
 	sqlite3_stmt* stmt;
 	int rc, flg;
 
-	// SQLを準備
+	// SQLを準備　GPTが記述したコードをベースに、ところどころ手を加えている。
 	rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
 	if (rc != SQLITE_OK) {
 		fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
@@ -255,9 +259,11 @@ void sqlInsertExecute(const char* sql, sqlite3* db, char* observationName, char*
 }
 
 int main() {
+	//flg1->平均気温の条件を満たしたときに1になる　flg2->最高気温の条件を満たしたときに1になる
 	int no, year, month, day = 1, flg1 = 0, flg2 = 0, dayOfAve = 0, dayOfHi = 0, monthOfAve = 0, monthOfHi = 0, monthOfForecast = 0, dayOfForecast = 0, menu, rc;
 	double aveSum = 0.0, hiSum = 0.0;
 	char* p, * data, * pre;
+	//aveやhiは2週間
 	char dayString[10], ave[10], hi[10], forecastDayString[11];
 	int daysOfMonth[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
 	sqlite3* db;
