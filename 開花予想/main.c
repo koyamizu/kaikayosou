@@ -5,9 +5,11 @@
 #include <curl/curl.h>
 #include<time.h>
 #include "sqlite3.h"
+#include <math.h>
 
 #define OBS_NUM sizeof(observations)/sizeof(observations[0])
 #define YEAR 2025
+#define ROUND(x) round(x*100)/100
 
 enum MENU {
 	VIEW, SEARCH, ERASE, EXIT
@@ -323,7 +325,8 @@ int main() {
 			printf("%sの開花予想日を計算しています...\n", observations[no].name);
 
 			day = 1;
-			aveSum = hiSum = flg1 = flg2 = 0;
+			aveSum = hiSum = 0.0;
+			flg1 = flg2 = 0;
 			year = YEAR;
 
 			for (month = 2; !(flg1 * flg2); month++) {
@@ -333,16 +336,16 @@ int main() {
 
 				if (data) {
 					while ((p = strstr(pre, dayString)) != NULL && !(flg1 * flg2)) {
-						p += 165;
+						p += 175;
 						p = strchr(p, ':') + 2;
-						aveSum += atof(p);
+						aveSum += ROUND(atof(p));
 						if (aveSum >= 400 && !flg1) {
 							dayOfAve = day;
 							monthOfAve = month;
 							flg1 = 1;
 						}
 						p = strchr(p, ':') + 2;
-						hiSum += atof(p);
+						hiSum += ROUND(atof(p));
 						if (hiSum >= 600 && !flg2) {
 							dayOfHi = day;
 							monthOfHi = month;
@@ -360,7 +363,7 @@ int main() {
 									for (int i = 0; i < 13 && !flg1; i++) {
 										sprintf(ave, "ave%d", i);
 										p = strstr(pre, ave) + strlen(ave) + 3;
-										aveSum += atof(p);
+										aveSum += ROUND(atof(p));
 										if (aveSum >= 400) {
 											dayOfAve = day + i;
 											monthOfAve = month;
@@ -371,7 +374,7 @@ int main() {
 									for (int i = 0; i < 13 && !flg2; i++) {
 										sprintf(hi, "hi%d", i);
 										p = strstr(pre, hi) + strlen(hi) + 3;
-										hiSum += atof(p);
+										hiSum += ROUND(atof(p));
 										if (hiSum >= 600) {
 											dayOfHi = day + i;
 											monthOfHi = month;
@@ -382,6 +385,7 @@ int main() {
 								}
 								else {
 									printf("データ取得に失敗しました\n");
+									exit(1);
 								}
 							}
 						}
@@ -390,6 +394,7 @@ int main() {
 				}
 				else {
 					printf("データ取得に失敗しました\n");
+					exit(1);
 				}
 				if (flg1 * flg2) {
 					break;
@@ -418,7 +423,7 @@ int main() {
 				}
 				else {
 					monthOfForecast = monthOfHi;
-					dayOfForecast = (tmHi.tm_yday - tmAve.tm_yday) / 2 + dayOfHi;
+					dayOfForecast = (tmAve.tm_yday - tmHi.tm_yday) / 2 + dayOfHi;
 					while (dayOfForecast > daysOfMonth[monthOfForecast - 1]) {
 						dayOfForecast -= daysOfMonth[monthOfForecast - 1];
 						monthOfForecast++;
